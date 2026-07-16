@@ -7,7 +7,7 @@ from serial import Serial
 
 
 
-def log_ntp_client():
+def log_ntp_client(address):
     currentDt = datetime.datetime.now()
     f = currentDt.strftime("%Y%m%d%H%M%S") + ".ntplog"
     logger = logging.getLogger(f)
@@ -18,7 +18,7 @@ def log_ntp_client():
     logging.getLogger("ntp").setLevel(logging.DEBUG)
 
     logger.debug("Starting ntp log...")
-    ntp = NtpArena(addresses=["10.1.10.206"])
+    ntp = NtpArena(addresses=[address])
     while True:
         
         
