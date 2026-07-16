@@ -3,7 +3,7 @@ import importlib.metadata
 import typer
 import serial.tools.list_ports
 from serial import Serial
-
+from typing import Annotated
 import sys
 app = typer.Typer()
 
@@ -111,6 +111,18 @@ def ports():
         if port.description != "n/a":
             print(port.device)
 
+
+from ns_term.mylogger import log_ntp_client, log_serial_port
+
+@app.command()
+def log(log_type, _port: Annotated[str, typer.Argument()] = None, _baud: Annotated[int, typer.Argument()] = None):
+    if log_type == "serial":
+        if _port is not None and _baud is not None:
+            log_serial_port(_port, _baud)
+        else:
+            print("must supply port and baud")
+    elif log_type == "ntp":
+        log_ntp_client()
 
 @app.command()
 def listen(_port, _baud):
