@@ -1,11 +1,13 @@
 [project]
 name = "ns-term"
-version = "0.0.13"
+version = "0.0.14"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aioconsole>=0.8.2",
     "pyserial>=3.5",
+    "pyserial-asyncio>=0.6",
     "python-ntp>=1.0.0",
     "typer>=0.26.8",
 ]
