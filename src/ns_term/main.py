@@ -116,14 +116,14 @@ def ports():
 from ns_term.mylogger import log_ntp_client
 
 @app.command()
-def log(log_type, _port: Annotated[str, typer.Argument()] = None, _baud: Annotated[int, typer.Argument()] = None):
+def log(log_type, _addr: Annotated[str, typer.Argument()] = None, _port: Annotated[str, typer.Argument()] = None, _baud: Annotated[int, typer.Argument()] = None):
     if log_type == "serial":
         if _port is not None and _baud is not None:
             log_serial(_port, _baud)
         else:
             print("must supply port and baud")
     elif log_type == "ntp":
-        log_ntp_client()
+        log_ntp_client(_addr)
         
 
 
