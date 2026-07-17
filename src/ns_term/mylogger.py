@@ -50,11 +50,13 @@ def log_ntp_client(address):
     ntp_request = b'\x1b' + 47 * b'\0'
     #print(ntp_request)
     while True:
-        
-        sock.sendto(ntp_request, (address, 123))
-        response = sock.recv(48)
+        try:
+            sock.sendto(ntp_request, (address, 123))
+            response = sock.recv(48)
 
-        logger.info(parse_packet(response))
+            logger.info(parse_packet(response))
+        except Exception as e:
+            logger.info(e)
         
         sleep(10)
 
