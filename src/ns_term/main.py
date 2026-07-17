@@ -123,7 +123,10 @@ def log(log_type, _addr: Annotated[str, typer.Argument()] = None, _port: Annotat
         else:
             print("must supply port and baud")
     elif log_type == "ntp":
-        log_ntp_client(_addr)
+        if _addr != None:
+            log_ntp_client(_addr)
+        else:
+            print("need addr")
         
 
 
