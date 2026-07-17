@@ -22,7 +22,7 @@ def log_ntp_client(address):
     while True:
         
         
-        pause = ntp.query_peers(time_limit=16)
+        pause = ntp.query_peers(time_limit=30)
         
         try:
             leap, offset, jitter = ntp.calculate_state()
@@ -30,7 +30,7 @@ def log_ntp_client(address):
 
         except NtpUnsynchronizedError as e:
             logger.warning(e)
-        sleep(16)
+        sleep(30)
 
 
 
