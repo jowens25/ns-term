@@ -32,7 +32,7 @@ def parse_packet(pkt):
 
 
 
-def log_ntp_client(address):
+def log_ntp_client(address, sleepfor):
     currentDt = datetime.datetime.now()
     f = currentDt.strftime("%Y%m%d%H%M%S") + ".ntplog"
     logger = logging.getLogger(f)
@@ -57,8 +57,9 @@ def log_ntp_client(address):
             logger.info(parse_packet(response))
         except Exception as e:
             logger.info(e)
+            break
         
-        sleep(10)
+        sleep(sleepfor)
 
 
 
