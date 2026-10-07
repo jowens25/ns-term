@@ -5,6 +5,7 @@ import typer
 import serial.tools.list_ports
 from serial import Serial
 from typing import Annotated
+from ns_term.mylogger import parse_ntp_packet
 from ns_term.ptp import parse_ptp_header
 from ns_term.ser import log_serial
 
@@ -18,40 +19,13 @@ app = typer.Typer()
 def version():
     typer.echo(importlib.metadata.version("ns-term"))
 
-
-
-@app.command()
-def ports():
-    for port in sorted(serial.tools.list_ports.comports()):
-
-        if port.description != "n/a":
-            print(port.device)
-
-
-from ns_term.mylogger import log_ntp_client, parse_ntp_packet
-
-@app.command()
-def log(log_type, 
-        _addr: Annotated[str, typer.Argument()] = None, 
-        _sleepfor: Annotated[float, typer.Argument()] = 1.0,
-        _port: Annotated[str, typer.Argument()] = None, 
-        _baud: Annotated[int, typer.Argument()] = None):
-    if log_type == "serial":
-        if _port is not None and _baud is not None:
-            log_serial(_port, _baud)
-        else:
-            print("must supply port and baud")
-    elif log_type == "ntp":
-        if _addr != None and _sleepfor != None:
-            log_ntp_client(_addr, _sleepfor)
-        else:
-            print("need addr")
         
         
 import socket
 import select
 @app.command()
 def ptp_test(_addr: Annotated[str, typer.Argument()] = None):
+    """PTP function test"""
     print("PTP TEST STARTED...")
     print("CTRL+C to stop")
     if _addr:
@@ -105,6 +79,7 @@ def ptp_test(_addr: Annotated[str, typer.Argument()] = None):
     
 @app.command()
 def ntp_test(_addr: Annotated[str, typer.Argument()] = None):
+    """NTP function test"""
     print("PTP TEST STARTED...")
     print("CTRL+C to stop")
     if _addr:
@@ -142,19 +117,19 @@ def ntp_test(_addr: Annotated[str, typer.Argument()] = None):
 
 @app.command()
 def listen(_port, _baud):
+    """Open a serial port and read out data"""
 
-    ser = serial.Serial(_port, baudrate=_baud, timeout=1)
+    try: 
+        ser = serial.Serial(_port, baudrate=_baud, timeout=1)
 
-    while(True):
-        print(ser.readline().decode(encoding="utf-8", errors="ignore"), end="")
+        while True:
+            print(ser.readline().decode(encoding="utf-8", errors="ignore"), end="")
 
+    except TimeoutError:
+        print("no data? timeout")
 
-
-
-@app.command()
-def hello():
-    """
-    hello
-    """
-    print("Hello world!")
-
+    except KeyboardInterrupt:
+        print("\nStopping and closing socket...")
+    finally:
+        ser.close()
+    
