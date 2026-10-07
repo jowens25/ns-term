@@ -52,7 +52,7 @@ wheels = [
 
 [[package]]
 name = "ns-term"
-version = "0.0.22"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "aioconsole" },

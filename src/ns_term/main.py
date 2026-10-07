@@ -118,7 +118,7 @@ def ntp_test(_addr: Annotated[str, typer.Argument()] = None):
 @app.command()
 def listen(_port, _baud):
     """Open a serial port and read out data"""
-
+    ser = None
     try: 
         ser = serial.Serial(_port, baudrate=_baud, timeout=1)
 
@@ -131,5 +131,6 @@ def listen(_port, _baud):
     except KeyboardInterrupt:
         print("\nStopping and closing socket...")
     finally:
-        ser.close()
+        if ser:
+            ser.close()
     
