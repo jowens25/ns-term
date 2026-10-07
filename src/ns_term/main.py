@@ -1,3 +1,4 @@
+import asyncio
 import importlib.metadata
 from time import sleep
 
@@ -7,7 +8,7 @@ from serial import Serial
 from typing import Annotated
 from ns_term.mylogger import parse_ntp_packet
 from ns_term.ptp import parse_ptp_header
-from ns_term.ser import log_serial
+from ns_term.ser import log_serial, serial_session
 
 
 
@@ -116,21 +117,10 @@ def ntp_test(_addr: Annotated[str, typer.Argument()] = None):
 
 
 @app.command()
-def listen(_port, _baud):
-    """Open a serial port and read out data"""
-    ser = None
-    try: 
-        ser = serial.Serial(_port, baudrate=_baud, timeout=1)
+def open(_port: Annotated[str, typer.Argument()] = None, _baud: Annotated[str, typer.Argument()] = None):
+    """Open a serial port and read out data
+        Commands prefixed with $ will be appended with <CR><LN>
+        Commands prefixed with # will be ran as scripts
+        """
 
-        while True:
-            print(ser.readline().decode(encoding="utf-8", errors="ignore"), end="")
-
-    except TimeoutError:
-        print("no data? timeout")
-
-    except KeyboardInterrupt:
-        print("\nStopping and closing socket...")
-    finally:
-        if ser:
-            ser.close()
-    
+    asyncio.run(serial_session(_port, _baud))

@@ -1,13 +1,17 @@
+"""Serial terminal with an input line that stays pinned while data streams in.
+
+pip install typer pyserial prompt_toolkit
+python serial_term.py /dev/ttyUSB0 --baud 115200
+"""
 import asyncio
-import serial_asyncio
-
-from aioconsole import ainput
-import datetime, logging, sys
-
 
 import serial
+import typer
 from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
+
+app = typer.Typer()
+
 
 async def read_loop(ser: serial.Serial, stop: asyncio.Event) -> None:
     """Read lines in a worker thread so the event loop never blocks."""
@@ -27,7 +31,7 @@ async def turnoffall(ser):
     for i in range(33):
         ser.write(f"$NVS{i}=1\r\n".encode("utf-8", errors="ignore"))
 
-async def serial_session(port: str, baud: int) -> None:
+async def run(port: str, baud: int) -> None:
     ser = serial.Serial(port, baud, timeout=0.1)
     stop = asyncio.Event()
     reader = asyncio.create_task(read_loop(ser, stop))
@@ -52,44 +56,13 @@ async def serial_session(port: str, baud: int) -> None:
         ser.close()
 
 
+@app.command()
+def main(
+    port: str = typer.Argument(..., help="Serial port, e.g. /dev/ttyUSB0 or COM3"),
+    baud: int = typer.Option(115200, help="Baud rate"),
+) -> None:
+    asyncio.run(run(port, baud))
 
 
-async def main_serial(_port, _baud):
-    global serial_logger
-    global serial_reader
-    global serial_writer
-    
-    currentDt = datetime.datetime.now()
-    f = currentDt.strftime("%Y%m%d%H%M%S") + ".seriallog"
-    serial_logger = logging.getLogger(f)
-
-    logging.basicConfig(format="%(asctime)s %(message)s", filename=f, encoding="utf-8", level=logging.DEBUG)
-    serial_logger.addHandler(logging.StreamHandler(sys.stdout))
-    logging.getLogger("ntp").setLevel(logging.DEBUG)
-
-    
-    serial_reader, serial_writer = await serial_asyncio.open_serial_connection(url=_port, baudrate=_baud) 
-    
-    
-    async def read_loop():
-        while True:
-            line = await serial_reader.readline()
-            serial_logger.info(line.decode(encoding="utf-8", errors="ignore").strip("\r\n"))
-            
-    
-    async def write_loop():
-        while True:
-            msg = await ainput()
-            serial_logger.info(msg)
-            serial_writer.write(msg.encode(encoding="utf-8", errors="ignore")+b"\r\n")
-            await serial_writer.drain()
-            
-            
-            
-    await asyncio.gather(read_loop(), write_loop())
-
-
-
-def log_serial(p, b):
-    
-    asyncio.run(main_serial(p, b))
+if __name__ == "__main__":
+    app()
