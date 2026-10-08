@@ -47,26 +47,35 @@ def ptp_test(_addr: Annotated[str, typer.Argument()] = None):
                 # Join multicast group
                 mreq = socket.inet_aton(MULTICAST_GROUP) + socket.inet_aton("0.0.0.0")
                 sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+                sock.settimeout(1.0) # 1 sec timeout
 
                 sockets.append(sock)
+
                 print(f"Listening on port {port}")
 
             # Monitor both sockets concurrently
             while True:
                 # select blocks until one of your sockets receives data
-                readable, _, _ = select.select(sockets, [], [])
+                try:
+                    readable, _, _ = select.select(sockets, [], [])
 
-                for ready_sock in readable:
-                    data, addr = ready_sock.recvfrom(1024)
-                    # Identify which port the packet hit by querying the socket
-                    local_port = ready_sock.getsockname()[1]
+                    for ready_sock in readable:
+                        data, addr = ready_sock.recvfrom(1024)
+                        # Identify which port the packet hit by querying the socket
+                        local_port = ready_sock.getsockname()[1]
+                        #print(_addr)
+                        #print(addr)
+                        if addr[0] == _addr:
+                        #if True:
 
-                    print(f"\n[Port {local_port}] RX from {addr}:")
-                    try:
-                        parsed = parse_ptp_header(data)
-                        print(parsed)
-                    except Exception as e:
-                        print(f"Failed to parse PTP header: {e} | Raw Data: {data.hex()}")
+                            print(f"\n[Port {local_port}] RX from {addr}:")
+                            try:
+                                parsed = parse_ptp_header(data)
+                                print(parsed)
+                            except Exception as e:
+                                print(f"Failed to parse PTP header: {e} | Raw Data: {data.hex()}")
+                except TimeoutError:
+                    print("timed out")
 
         except KeyboardInterrupt:
             print("\nStopping and closing sockets...")
