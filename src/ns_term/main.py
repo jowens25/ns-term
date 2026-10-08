@@ -5,7 +5,7 @@ from time import sleep
 import typer
 import serial.tools.list_ports
 from serial import Serial
-from typing import Annotated
+from typing import Annotated, Optional
 from ns_term.mylogger import parse_ntp_packet
 from ns_term.ptp import parse_ptp_header
 from ns_term.ser import log_serial, serial_session
@@ -21,71 +21,66 @@ def version():
     typer.echo(importlib.metadata.version("ns-term"))
 
         
-        
-import socket
 import select
+import socket
+
 @app.command()
-def ptp_test(_addr: Annotated[str, typer.Argument()] = None):
+def ptp_test(_addr: Annotated[Optional[str], typer.Argument()] = None):
     """PTP function test"""
     print("PTP TEST STARTED...")
     print("CTRL+C to stop")
-    if _addr:
-        print(f"Pinging {_addr}")
+    if not _addr:
+        print("Missing Master IP")
+        return
 
-        PTP_EVENT_PORT = 319
-        PTP_GENERAL_PORT = 320
-        MULTICAST_GROUP = "224.0.1.129"
+    PTP_PORTS = [319, 320]
+    MULTICAST_GROUP = "224.0.1.129"
 
-        sockets = []
-        try:
-            # Set up socket for both ports
-            for port in [PTP_EVENT_PORT, PTP_GENERAL_PORT]:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)  
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                sock.bind(('', port))
+    # Find the local interface IP used to reach the master
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        probe.connect((_addr, 319))   # UDP connect sends nothing
+        local_ip = probe.getsockname()[0]
+    finally:
+        probe.close()
+    print(f"Pinging {_addr} via local interface {local_ip}")
 
-                # Join multicast group
-                mreq = socket.inet_aton(MULTICAST_GROUP) + socket.inet_aton("0.0.0.0")
-                sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-                sock.settimeout(1.0) # 1 sec timeout
+    sockets = []
+    try:
+        for port in PTP_PORTS:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(("", port))
 
-                sockets.append(sock)
+            mreq = socket.inet_aton(MULTICAST_GROUP) + socket.inet_aton(local_ip)
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
-                print(f"Listening on port {port}")
+            sockets.append(sock)
+            print(f"Listening on port {port}")
 
-            # Monitor both sockets concurrently
-            while True:
-                # select blocks until one of your sockets receives data
+        while True:
+            readable, _, _ = select.select(sockets, [], [], 1.0)  # timeout here
+            if not readable:
+                continue  # lets Ctrl+C get through on Windows
+
+            for ready_sock in readable:
+                data, addr = ready_sock.recvfrom(1024)
+                local_port = ready_sock.getsockname()[1]
+
+                if addr[0] != _addr:
+                    continue
+
+                print(f"\n[Port {local_port}] RX from {addr}:")
                 try:
-                    readable, _, _ = select.select(sockets, [], [])
+                    print(parse_ptp_header(data))
+                except Exception as e:
+                    print(f"Failed to parse PTP header: {e} | Raw Data: {data.hex()}")
 
-                    for ready_sock in readable:
-                        data, addr = ready_sock.recvfrom(1024)
-                        # Identify which port the packet hit by querying the socket
-                        local_port = ready_sock.getsockname()[1]
-                        #print(_addr)
-                        #print(addr)
-                        if addr[0] == _addr:
-                        #if True:
-
-                            print(f"\n[Port {local_port}] RX from {addr}:")
-                            try:
-                                parsed = parse_ptp_header(data)
-                                print(parsed)
-                            except Exception as e:
-                                print(f"Failed to parse PTP header: {e} | Raw Data: {data.hex()}")
-                except TimeoutError:
-                    print("timed out")
-
-        except KeyboardInterrupt:
-            print("\nStopping and closing sockets...")
-        finally:
-            for sock in sockets:
-                sock.close()
-        
-        
-    else:
-        print("Missing Master IP") 
+    except KeyboardInterrupt:
+        print("\nStopping and closing sockets...")
+    finally:
+        for sock in sockets:
+            sock.close()
     
 @app.command()
 def ntp_test(_addr: Annotated[str, typer.Argument()] = None):
