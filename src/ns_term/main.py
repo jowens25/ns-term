@@ -128,3 +128,13 @@ def open(_port: Annotated[str, typer.Argument()] = None, _baud: Annotated[str, t
         """
 
     asyncio.run(serial_session(_port, _baud))
+    
+    
+import serial.tools.list_ports    
+@app.command()
+def ports():
+    
+    ports = serial.tools.list_ports.comports()
+
+    for port in sorted(ports):
+        print(f"{port.device} {port.description} {port.hwid}")
