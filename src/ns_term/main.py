@@ -121,16 +121,6 @@ def ntp_test(_addr: Annotated[str, typer.Argument()] = None):
         sock.close()
     
 
-
-@app.command()
-def open(_port: Annotated[str, typer.Argument()] = None, _baud: Annotated[str, typer.Argument()] = None):
-    """Open a serial port and read out data
-        Commands prefixed with $ will be appended with <CR><LN>
-        Commands prefixed with # will be ran as scripts
-        """
-
-    asyncio.run(serial_session(_port, _baud))
-    
     
 import serial.tools.list_ports    
 @app.command()
@@ -141,14 +131,7 @@ def ports():
     for port in sorted(ports):
         print(f"{port.device} {port.description} {port.hwid}")
         
-        
 
-@app.command()
-def test(_port: Annotated[str, typer.Argument()] = None, _baud: Annotated[str, typer.Argument()] = None):
-    """Serial session alt io tool"""
-    asyncio.run(serial_session_io(_port, _baud))
-    
-    
     
 @app.command()
 def log(_port: Annotated[str, typer.Argument()] = None, _baud: Annotated[str, typer.Argument()] = None):
@@ -156,3 +139,11 @@ def log(_port: Annotated[str, typer.Argument()] = None, _baud: Annotated[str, ty
     Start interactive logger
     """
     asyncio.run(log_serial_io(_port, _baud))
+
+
+@app.command()
+def open(_port: Annotated[str, typer.Argument()] = None, _baud: Annotated[str, typer.Argument()] = None):
+    """
+    Open device
+    """
+    asyncio.run(log_serial_io(_port, _baud, False))

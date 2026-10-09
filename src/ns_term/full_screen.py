@@ -14,7 +14,8 @@ from serial import SerialException
 import asyncio
 from datetime import datetime
 import os 
-async def log_serial_io(port, baud):
+async def log_serial_io(port, baud, logging=True):
+    
     
     now = datetime.now()
     timestamp = now.strftime("%Y%m%d-%H%M%S")
@@ -36,7 +37,8 @@ async def log_serial_io(port, baud):
     
     global byte_count, response, buffer
     byte_count = 0
-    log_file = open(log_path, "a", encoding="utf-8", buffering=1)
+    if logging:
+        log_file = open(log_path, "a", encoding="utf-8", buffering=1)
     
     
     buffer = b""
@@ -61,7 +63,8 @@ async def log_serial_io(port, baud):
                     if line:
                         serial_string = line.decode(encoding="utf-8", errors="ignore") + "\n"
                         byte_count += len(serial_string)
-                        log_file.write(serial_string)
+                        if logging:
+                            log_file.write(serial_string)
                         msg = serial_string.strip("\r\n")
                         
                         if response in msg:
@@ -91,7 +94,8 @@ async def log_serial_io(port, baud):
         global response
         cmd_window.text += f"{buf.text} -> "
         
-        log_file.write(buf.text+"\r\n")
+        if logging:
+            log_file.write(buf.text+"\r\n")
         
         writer.write(buf.text.encode(encoding="utf-8", errors="ignore")+b"\r\n")
         
@@ -115,7 +119,10 @@ async def log_serial_io(port, baud):
 
 
     def status_text():
-        return f"{log_path} bytes transferred: {byte_count}"
+        if logging:
+            return f"{log_path} bytes transferred: {byte_count}"
+        else:
+            return "no log available"
     
 
     
@@ -127,7 +134,7 @@ async def log_serial_io(port, baud):
         status,
         VSplit([serial_window, VerticalLine(), cmd_window]),
         HorizontalLine(),
-        VSplit([prompt])    
+        VSplit([prompt, VerticalLine(), Window(FormattedTextControl("ctrl+c to exit", style='bold'),height=1)])    
     ])
 
     kb = KeyBindings()
@@ -149,7 +156,8 @@ async def log_serial_io(port, baud):
     finally:
         read_task.cancel()
         writer.close()
-        log_file.flush()
-        log_file.close()
+        if logging:
+            log_file.flush()
+            log_file.close()
         sys.exit(-1)
 
