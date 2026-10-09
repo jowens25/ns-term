@@ -6,6 +6,8 @@ import typer
 import serial.tools.list_ports
 from serial import Serial
 from typing import Annotated, Optional
+from ns_term.full_screen import log_serial_io
+from ns_term.main2 import serial_session_io
 from ns_term.mylogger import parse_ntp_packet
 from ns_term.ptp import parse_ptp_header
 from ns_term.ser import log_serial, serial_session
@@ -133,8 +135,24 @@ def open(_port: Annotated[str, typer.Argument()] = None, _baud: Annotated[str, t
 import serial.tools.list_ports    
 @app.command()
 def ports():
-    
+    """List available serial ports"""
     ports = serial.tools.list_ports.comports()
 
     for port in sorted(ports):
         print(f"{port.device} {port.description} {port.hwid}")
+        
+        
+
+@app.command()
+def test(_port: Annotated[str, typer.Argument()] = None, _baud: Annotated[str, typer.Argument()] = None):
+    """Serial session alt io tool"""
+    asyncio.run(serial_session_io(_port, _baud))
+    
+    
+    
+@app.command()
+def log(_port: Annotated[str, typer.Argument()] = None, _baud: Annotated[str, typer.Argument()] = None):
+    """
+    Start interactive logger
+    """
+    asyncio.run(log_serial_io(_port, _baud))

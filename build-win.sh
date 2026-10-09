@@ -1,1 +1,0 @@
-make clean && make CROSS_COMPILE=x86_64-w64-mingw32-

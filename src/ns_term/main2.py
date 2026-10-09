@@ -1,68 +1,44 @@
-"""Serial terminal with an input line that stays pinned while data streams in.
-
-pip install typer pyserial prompt_toolkit
-python serial_term.py /dev/ttyUSB0 --baud 115200
-"""
 import asyncio
-
-import serial
-import typer
+import serial_asyncio
+import sys
 from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
 
-app = typer.Typer()
 
-
-async def read_loop(ser: serial.Serial, stop: asyncio.Event) -> None:
-    """Read lines in a worker thread so the event loop never blocks."""
-    loop = asyncio.get_running_loop()
-    while not stop.is_set():
-        try:
-            line = await loop.run_in_executor(None, ser.readline)  # 0.1s timeout
-        except serial.SerialException as exc:
-            print(f"[serial error] {exc}")
-            stop.set()
-            return
-        if line:
-            # print() is safe here: patch_stdout redraws the prompt below it
-            print(line.decode(errors="replace").rstrip())
-
-async def turnoffall(ser):
-    for i in range(33):
-        ser.write(f"$NVS{i}=1\r\n".encode("utf-8", errors="ignore"))
-
-async def run(port: str, baud: int) -> None:
-    ser = serial.Serial(port, baud, timeout=0.1)
-    stop = asyncio.Event()
-    reader = asyncio.create_task(read_loop(ser, stop))
-    session = PromptSession()
-    loop = asyncio.get_running_loop()
-
+async def read_loop(reader, writer):
+    
     try:
+        while True: 
+            line = await reader.readline()
+            print(line.decode(encoding="utf-8", errors="ignore").strip("\r\n"))
+            
+    except KeyboardInterrupt:
+        print("canceled write loop")
+        writer.close()
+        sys.exit(0)
+            
+
+async def serial_session_io(port, baud):
+    
+    try:
+        reader = None
+        reader, writer = await serial_asyncio.open_serial_connection(url=port, baudrate=baud)
+        session = PromptSession("> ")
+
         with patch_stdout():
-            while not stop.is_set():
-                try:
-                    text: str
-                    text = await session.prompt_async("> ")
-                except (EOFError, KeyboardInterrupt):  # Ctrl-D / Ctrl-C
-                    break
-                if text.startswith("$"):
-                    await loop.run_in_executor(None, ser.write, (text+'\r\n').encode("utf-8", errors="ignore"))
-                elif text.startswith("#"):
-                    await turnoffall(ser)
-    finally:
-        stop.set()
-        await reader
-        ser.close()
-
-
-@app.command()
-def main(
-    port: str = typer.Argument(..., help="Serial port, e.g. /dev/ttyUSB0 or COM3"),
-    baud: int = typer.Option(115200, help="Baud rate"),
-) -> None:
-    asyncio.run(run(port, baud))
-
-
-if __name__ == "__main__":
-    app()
+            asyncio.create_task(read_loop(reader, writer))
+            
+            while True:
+                user_text = await session.prompt_async()
+                writer.write(user_text.encode(encoding="utf-8", errors="ignore")+b"\r\n")
+                asyncio.create_task(writer.drain())
+                
+    except KeyboardInterrupt:
+        sys.exit(0)
+    
+    except  Exception as e:
+        print(e)
+        sys.exit(-1)
+        
+        
+        
