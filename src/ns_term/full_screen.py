@@ -63,10 +63,12 @@ async def log_serial_io(port, baud):
                         byte_count += len(serial_string)
                         log_file.write(serial_string)
                         msg = serial_string.strip("\r\n")
+                        
                         if response in msg:
                             cmd_window.text += msg + '\n'
                         elif "?" in msg:
                             cmd_window.text += msg + '\n'
+                            
                         buf = serial_window.buffer.text
                         if len(buf) > MAX_CHARS:
                             serial_window.buffer.text = buf[-MAX_CHARS:]
@@ -95,7 +97,7 @@ async def log_serial_io(port, baud):
         
         asyncio.create_task(writer.drain())
         
-        response = buf.text.removeprefix("$")[:3]
+        response = buf.text.removeprefix("$").strip("?")
         
         return False
 
